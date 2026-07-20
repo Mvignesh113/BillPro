@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BillPro">
+  <meta name="description" content="Professional offline billing app for small businesses">
+  <title>BillPro — Offline Billing</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     TOAST CONTAINER
+     ════════════════════════════════════════════ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ════════════════════════════════════════════
+     PIN MODAL
+     ════════════════════════════════════════════ -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal-sheet">
+    <div class="modal-title" id="pinModalTitle">🔐 Admin PIN</div>
+    <div class="pin-dots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" data-n="1">1</button>
+      <button class="pin-btn" data-n="2">2</button>
+      <button class="pin-btn" data-n="3">3</button>
+      <button class="pin-btn" data-n="4">4</button>
+      <button class="pin-btn" data-n="5">5</button>
+      <button class="pin-btn" data-n="6">6</button>
+      <button class="pin-btn" data-n="7">7</button>
+      <button class="pin-btn" data-n="8">8</button>
+      <button class="pin-btn" data-n="9">9</button>
+      <button class="pin-btn del" id="pinModalClose">✕</button>
+      <button class="pin-btn" data-n="0">0</button>
+      <button class="pin-btn del" id="pinDel">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     BILL DETAIL MODAL
+     ════════════════════════════════════════════ -->
+<div class="bill-detail-modal" id="billDetailModal">
+  <div class="bill-detail-sheet">
+    <div class="top-bar" style="border-radius:24px 24px 0 0">
+      <button class="back-btn" id="billDetailCloseBtn">✕</button>
+      <h2>Bill Receipt</h2>
+      <div style="display:flex;gap:.5rem">
+        <button class="icon-btn" id="billDetailPrintBtn" title="Print">🖨</button>
+        <button class="icon-btn" id="billDetailPdfBtn" title="PDF">📄</button>
+      </div>
+    </div>
+    <div class="bill-detail-inner" id="billDetailInner"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: LOGIN
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-login">
+  <div class="login-bg-orbs">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+  <div class="login-content">
+    <div class="login-logo">
+      <div class="logo-icon">🧾</div>
+      <h1>BillPro</h1>
+      <p>Professional Offline Billing</p>
+    </div>
+    <div class="login-cards">
+      <div class="login-card" id="cardAdmin">
+        <div class="card-icon">👑</div>
+        <h3>Admin</h3>
+        <p>Manage items &amp; reports</p>
+      </div>
+      <div class="login-card" id="cardBilling">
+        <div class="card-icon">🧾</div>
+        <h3>Billing</h3>
+        <p>Create new bills</p>
+      </div>
+    </div>
+    <p style="font-size:.72rem;color:rgba(255,255,255,.4);text-align:center;margin-top:1.5rem">Default admin PIN: 9999</p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: ADMIN DASHBOARD
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-admin">
+  <div class="top-bar">
+    <div style="display:flex;align-items:center;gap:.6rem">
+      <span style="font-size:1.25rem">🧾</span>
+      <h2>Dashboard</h2>
+    </div>
+    <button class="icon-btn" id="adminLogout" title="Logout">🚪</button>
+  </div>
+
+  <div class="scroll-area">
+    <div class="admin-header">
+      <p id="adminDate">Loading…</p>
+      <h1>Good Day, Admin 👋</h1>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-grid">
+      <div class="stat-card animate-in" style="animation-delay:.05s">
+        <div class="icon">💰</div>
+        <div class="label">Today's Sale</div>
+        <div class="value" id="stat-today">₹0.00</div>
+      </div>
+      <div class="stat-card animate-in" style="animation-delay:.10s">
+        <div class="icon">📅</div>
+        <div class="label">Yesterday</div>
+        <div class="value" id="stat-yesterday">₹0.00</div>
+      </div>
+      <div class="stat-card animate-in" style="animation-delay:.15s">
+        <div class="icon">📈</div>
+        <div class="label">Monthly Sale</div>
+        <div class="value" id="stat-month">₹0.00</div>
+      </div>
+      <div class="stat-card animate-in" style="animation-delay:.20s">
+        <div class="icon">🏆</div>
+        <div class="label">Top Item</div>
+        <div class="value" id="stat-top" style="font-size:.85rem">—</div>
+      </div>
+      <div class="stat-card animate-in" style="animation-delay:.25s">
+        <div class="icon">🧾</div>
+        <div class="label">Total Bills</div>
+        <div class="value" id="stat-bills">0</div>
+      </div>
+      <div class="stat-card animate-in" style="animation-delay:.30s">
+        <div class="icon">📦</div>
+        <div class="label">Total Items</div>
+        <div class="value" id="stat-items">0</div>
+      </div>
+    </div>
+
+    <!-- Menu Grid -->
+    <div class="menu-grid">
+      <div class="menu-card accent" id="menuBilling">
+        <div class="m-icon">🧾</div>
+        <span>New Bill</span>
+      </div>
+      <div class="menu-card green" id="menuItems">
+        <div class="m-icon">📦</div>
+        <span>Items</span>
+      </div>
+      <div class="menu-card yellow" id="menuHistory">
+        <div class="m-icon">🕐</div>
+        <span>Bill History</span>
+      </div>
+      <div class="menu-card cyan" id="menuReports">
+        <div class="m-icon">📊</div>
+        <span>Reports</span>
+      </div>
+      <div class="menu-card purple" id="menuSettings">
+        <div class="m-icon">⚙️</div>
+        <span>Settings</span>
+      </div>
+      <div class="menu-card green" id="menuBackup">
+        <div class="m-icon">💾</div>
+        <span>Backup</span>
+      </div>
+    </div>
+    <div style="height:2rem"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: ITEM MANAGER
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-items">
+  <div class="top-bar">
+    <button class="back-btn" id="itemsBack">‹</button>
+    <h2>Item Management</h2>
+    <div></div>
+  </div>
+
+  <div class="search-bar">
+    <span class="s-icon">🔍</span>
+    <input type="search" id="itemSearch" placeholder="Search items…" autocomplete="off">
+  </div>
+  <div class="cat-chips" id="itemCatChips"></div>
+
+  <div class="scroll-area" style="padding-bottom:5rem">
+    <div class="items-grid" id="itemsGrid"></div>
+  </div>
+
+  <button class="fab" id="fabAddItem" title="Add Item">＋</button>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: ITEM ADD/EDIT FORM
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-item-form">
+  <div class="top-bar">
+    <button class="back-btn" id="itemFormBack">‹</button>
+    <h2 id="itemFormTitle">Add Item</h2>
+    <div></div>
+  </div>
+
+  <div class="form-scroll">
+    <!-- Image Picker -->
+    <div class="img-picker" id="imgPickerArea">
+      <img id="fItemPreview" src="" alt="Preview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:16px">
+      <div id="pickPlaceholder" style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
+        <span class="pick-icon">📷</span>
+        <span class="pick-label">Tap to choose image</span>
+      </div>
+    </div>
+    <div class="img-actions">
+      <button id="captureCamera" type="button">📷 Camera</button>
+      <button id="openGallery" type="button">🖼 Gallery</button>
+    </div>
+    <input type="hidden" id="capturedImageData">
+    <input type="file" id="fileGallery" accept="image/*" style="display:none">
+    <input type="file" id="fileCamera" accept="image/*" capture="environment" style="display:none">
+
+    <div class="form-group">
+      <label>Item Name *</label>
+      <input class="form-input" type="text" id="fItemName" placeholder="e.g. Masala Dosa" autocomplete="off">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <input class="form-input" type="text" id="fItemCategory" placeholder="e.g. Food" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Unit</label>
+        <select class="form-input" id="fItemUnit">
+          <option value="pc">Piece</option>
+          <option value="kg">Kg</option>
+          <option value="g">Gram</option>
+          <option value="L">Litre</option>
+          <option value="ml">ml</option>
+          <option value="box">Box</option>
+          <option value="pkt">Packet</option>
+          <option value="dz">Dozen</option>
+          <option value="set">Set</option>
+          <option value="pair">Pair</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Price *</label>
+        <input class="form-input" type="number" id="fItemPrice" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Stock (optional)</label>
+        <input class="form-input" type="number" id="fItemStock" placeholder="—" min="0">
+      </div>
+    </div>
+
+    <button class="btn btn-primary w-full" id="saveItemBtn" style="padding:.9rem;font-size:1rem;margin-bottom:2rem">
+      💾 Save Item
+    </button>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: BILLING
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-billing">
+  <div class="top-bar">
+    <button class="back-btn" id="billingBack">‹</button>
+    <h2>Billing</h2>
+    <button class="icon-btn" id="clearCartBtn" title="Clear cart" style="font-size:.8rem">🗑</button>
+  </div>
+
+  <div class="bill-search-wrap">
+    <div class="search-bar">
+      <span class="s-icon">🔍</span>
+      <input type="search" id="billSearch" placeholder="Search items…" autocomplete="off">
+    </div>
+    <div class="cat-chips" id="billCatChips"></div>
+  </div>
+
+  <div class="scroll-area" style="padding-bottom:300px">
+    <div class="billing-items" id="billingItemsGrid"></div>
+  </div>
+
+  <!-- Cart Panel (slide-up from bottom) -->
+  <div class="cart-panel" id="cartPanel">
+    <div class="cart-handle-wrap" id="cartHeader">
+      <div class="cart-handle"></div>
+      <div class="cart-header-row">
+        <h3>🛒 Cart <span class="cart-count-badge" id="cartBadge">0</span></h3>
+        <span class="cart-toggle-hint" id="cartToggleHint">tap to expand</span>
+      </div>
+    </div>
+
+    <div class="cart-body" id="cartBody">
+      <div class="cart-items" id="cartItems"></div>
+
+      <div class="cart-total-section">
+        <div class="total-row">
+          <span>Subtotal</span>
+          <span id="cartTotal">₹0.00</span>
+        </div>
+        <div class="discount-row">
+          <label>Discount (₹)</label>
+          <input class="discount-input" type="number" id="discountInput" placeholder="0" min="0">
+        </div>
+        <div class="total-row grand-row">
+          <span>Grand Total</span>
+          <span id="cartGrand">₹0.00</span>
+        </div>
+
+        <!-- Customer details -->
+        <div class="customer-row">
+          <input class="customer-input" type="text" id="customerName" placeholder="👤 Customer name (optional)" autocomplete="off">
+          <input class="customer-input" type="tel" id="customerMobile" placeholder="📱 Mobile (optional)">
+        </div>
+        <div class="customer-row">
+          <input class="customer-input" type="text" id="billNotes" placeholder="📝 Notes (optional)" autocomplete="off">
+        </div>
+
+        <div class="pay-modes">
+          <button class="pay-btn active" id="payCash">💵 Cash</button>
+          <button class="pay-btn" id="payUpi">📱 UPI</button>
+          <button class="pay-btn" id="payCard">💳 Card</button>
+        </div>
+
+        <button class="checkout-btn" id="checkoutBtn" disabled>
+          Checkout →
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: UPI QR FULLSCREEN
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-upi">
+  <div class="upi-topbar">
+    <button class="back-btn upi-back-btn" id="upiBack">‹</button>
+    <span>Scan &amp; Pay</span>
+    <div></div>
+  </div>
+
+  <div class="upi-content">
+    <div class="upi-shop" id="upiShopName">Shop Name</div>
+    <div class="upi-amount" id="upiAmount">₹0.00</div>
+
+    <div class="qr-frame">
+      <img id="upiQrImg" src="" alt="QR Code" style="display:none;width:100%;height:100%;object-fit:contain">
+      <div id="upiQrPlaceholder" class="qr-placeholder">🔲<br><small>No QR uploaded</small></div>
+    </div>
+
+    <div class="scan-label">Scan QR code to pay</div>
+    <div class="upi-id-badge" id="upiIdDisplay">—</div>
+
+    <button class="confirm-btn" id="upiPayDone">
+      ✅ Payment Received — Save Bill
+    </button>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: BILL HISTORY
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-history">
+  <div class="top-bar">
+    <button class="back-btn" id="historyBack">‹</button>
+    <h2>Bill History</h2>
+    <div></div>
+  </div>
+
+  <div class="search-bar">
+    <span class="s-icon">🔍</span>
+    <input type="search" id="historySearch" placeholder="Search bills, customer, item…" autocomplete="off">
+  </div>
+
+  <div class="scroll-area">
+    <div class="bill-list" id="billList"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: REPORTS
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-reports">
+  <div class="top-bar">
+    <button class="back-btn" id="reportsBack">‹</button>
+    <h2>Reports &amp; Export</h2>
+    <div></div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="setting-section-title">Sales Overview</div>
+    <div class="report-grid">
+      <div class="report-card">
+        <div class="rc-label">Today</div>
+        <div class="rc-value" id="rep-today">₹0</div>
+      </div>
+      <div class="report-card">
+        <div class="rc-label">Yesterday</div>
+        <div class="rc-value" id="rep-yesterday">₹0</div>
+      </div>
+      <div class="report-card">
+        <div class="rc-label">This Week</div>
+        <div class="rc-value" id="rep-week">₹0</div>
+      </div>
+      <div class="report-card">
+        <div class="rc-label">This Month</div>
+        <div class="rc-value" id="rep-month">₹0</div>
+      </div>
+      <div class="report-card wide">
+        <div class="rc-label">This Year</div>
+        <div class="rc-value" id="rep-year">₹0</div>
+      </div>
+    </div>
+
+    <div class="setting-section-title">Analytics</div>
+    <div class="report-grid">
+      <div class="report-card">
+        <div class="rc-label">Total Bills</div>
+        <div class="rc-value" id="rep-total-bills">0</div>
+      </div>
+      <div class="report-card">
+        <div class="rc-label">Avg Bill</div>
+        <div class="rc-value" id="rep-avg">₹0</div>
+      </div>
+      <div class="report-card wide">
+        <div class="rc-label">🏆 Top Selling Item</div>
+        <div class="rc-value" style="font-size:1rem" id="rep-top">—</div>
+      </div>
+    </div>
+
+    <div class="setting-section-title">Export to Excel</div>
+    <div class="export-section">
+      <div class="export-btn" id="exportDaily">
+        <div class="eb-icon">📊</div>
+        <div class="eb-info">
+          <h3>Daily Report</h3>
+          <p>Today's bills in Excel</p>
+        </div>
+      </div>
+      <div class="export-btn" id="exportMonthly">
+        <div class="eb-icon">📅</div>
+        <div class="eb-info">
+          <h3>Monthly Report</h3>
+          <p>This month's bills</p>
+        </div>
+      </div>
+      <div class="export-btn" id="exportYearly">
+        <div class="eb-icon">📈</div>
+        <div class="eb-info">
+          <h3>Yearly Report</h3>
+          <p>Full year export</p>
+        </div>
+      </div>
+      <div class="export-btn" id="exportPdfReport">
+        <div class="eb-icon">📄</div>
+        <div class="eb-info">
+          <h3>PDF Summary</h3>
+          <p>Monthly summary as PDF</p>
+        </div>
+      </div>
+    </div>
+    <div style="height:2rem"></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════
+     SCREEN: SETTINGS
+     ════════════════════════════════════════════ -->
+<section class="screen" id="screen-settings">
+  <div class="top-bar">
+    <button class="back-btn" id="settingsBack">‹</button>
+    <h2>Settings</h2>
+    <button class="icon-btn" id="saveSettingsBtn" title="Save">💾</button>
+  </div>
+
+  <div class="scroll-area">
+    <div class="setting-section-title">Shop Details</div>
+    <div class="settings-list">
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(99,102,241,.15)">🏪</div>
+        <div class="si-info">
+          <h3>Shop Name</h3>
+          <input type="text" id="setShopName" placeholder="Enter shop name" autocomplete="off">
+        </div>
+      </div>
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(34,197,94,.15)">📞</div>
+        <div class="si-info">
+          <h3>Phone</h3>
+          <input type="tel" id="setPhone" placeholder="Phone number">
+        </div>
+      </div>
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(245,158,11,.15)">📍</div>
+        <div class="si-info">
+          <h3>Address</h3>
+          <textarea id="setAddress" rows="2" placeholder="Shop address"></textarea>
+        </div>
+      </div>
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(6,182,212,.15)">📝</div>
+        <div class="si-info">
+          <h3>Bill Footer</h3>
+          <input type="text" id="setFooter" placeholder="e.g. Thank you! Visit again 🙏" autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <div class="setting-section-title">Payment</div>
+    <div class="settings-list">
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(99,102,241,.15)">💳</div>
+        <div class="si-info">
+          <h3>UPI ID</h3>
+          <input type="text" id="setUpiId" placeholder="yourname@upi" autocomplete="off">
+        </div>
+      </div>
+      <div class="setting-item" style="flex-direction:column;align-items:flex-start;gap:.75rem">
+        <div style="display:flex;align-items:center;gap:.85rem;width:100%">
+          <div class="si-icon" style="background:rgba(99,102,241,.15)">🔲</div>
+          <div class="si-info">
+            <h3>UPI QR Code</h3>
+            <p>Upload your payment QR image</p>
+          </div>
+          <button class="btn btn-secondary" id="pickQrBtn" style="font-size:.75rem;padding:.45rem .7rem;flex-shrink:0">Upload</button>
+        </div>
+        <img id="qrPreview" src="" alt="QR Preview" style="display:none;width:130px;height:130px;object-fit:contain;border-radius:10px;background:#fff;padding:.5rem;margin-left:.5rem">
+        <input type="file" id="qrFileInput" accept="image/*" style="display:none">
+      </div>
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(245,158,11,.15)">💱</div>
+        <div class="si-info">
+          <h3>Currency Symbol</h3>
+          <select id="setCurrency" style="background:none;border:none;outline:none;color:var(--text);font-size:.85rem;width:100%">
+            <option value="₹">₹ Rupee</option>
+            <option value="$">$ Dollar</option>
+            <option value="€">€ Euro</option>
+            <option value="£">£ Pound</option>
+            <option value="¥">¥ Yen</option>
+            <option value="৳">৳ Taka</option>
+            <option value="AED">AED Dirham</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="setting-section-title">Appearance</div>
+    <div class="settings-list">
+      <div class="setting-item">
+        <div class="si-icon" style="background:rgba(99,102,241,.15)">🌙</div>
+        <div class="si-info">
+          <h3>Dark Mode</h3>
+          <p>Toggle dark / light theme</p>
+        </div>
+        <div class="toggle-switch on" id="darkToggle"></div>
+      </div>
+    </div>
+
+    <div class="setting-section-title">Security</div>
+    <div class="settings-list">
+      <div class="setting-item" id="changePinBtn">
+        <div class="si-icon" style="background:rgba(239,68,68,.15)">🔐</div>
+        <div class="si-info">
+          <h3>Change Admin PIN</h3>
+          <p>Update your 4-digit PIN</p>
+        </div>
+        <span class="si-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="setting-section-title">Data</div>
+    <div class="settings-list">
+      <div class="setting-item" id="backupBtn">
+        <div class="si-icon" style="background:rgba(34,197,94,.15)">📤</div>
+        <div class="si-info">
+          <h3>Backup Data</h3>
+          <p>Export all data as JSON</p>
+        </div>
+        <span class="si-arrow">›</span>
+      </div>
+      <div class="setting-item" id="restoreBtn">
+        <div class="si-icon" style="background:rgba(6,182,212,.15)">📥</div>
+        <div class="si-info">
+          <h3>Restore Backup</h3>
+          <p>Import data from JSON backup</p>
+        </div>
+        <span class="si-arrow">›</span>
+      </div>
+      <div class="setting-item" id="clearAllDataBtn">
+        <div class="si-icon" style="background:rgba(239,68,68,.15)">🗑️</div>
+        <div class="si-info">
+          <h3>Clear All Data</h3>
+          <p>Delete all bills and items</p>
+        </div>
+        <span class="si-arrow" style="color:var(--red)">›</span>
+      </div>
+    </div>
+
+    <div style="padding:1rem;text-align:center;color:var(--text3);font-size:.72rem">
+      BillPro v3.0 — Works 100% Offline
+    </div>
+    <div style="height:2rem"></div>
+  </div>
+</section>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
