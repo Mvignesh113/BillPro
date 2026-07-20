@@ -1266,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (state.cart.length > 0) {
       if (!confirm('Leave billing? Cart will be cleared.')) return;
     }
-    showScreen('admin');
+    showScreen('login');
   });
   q('#clearCartBtn').addEventListener('click', () => {
     if (!state.cart.length) return;
